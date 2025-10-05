@@ -1,0 +1,28 @@
+.stars {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+}
+
+.star {
+    position: absolute;
+    background-color: white;
+    border-radius: 50%;
+    animation: twinkle var(--duration, 5s) infinite ease-in-out;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+}
+
+/* Generate random stars */
+.star:nth-child(1) { top: 10%; left: 20%; --duration: 3s; }
+.star:nth-child(2) { top: 30%; left: 80%; --duration: 4s; }
+.star:nth-child(3) { top: 60%; left: 40%; --duration: 5s; }
+.star:nth-child(4) { top: 80%; left: 60%; --duration: 6s; }
+.star:nth-child(5) { top: 40%; left: 10%; --duration: 7s; }
+/* Add more stars as needed */
