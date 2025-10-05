@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="header-section">
+        <h1><i class="fas fa-chart-bar"></i> Space Biology Dashboard</h1>
+        <p>Explore NASA's space biology experiments and discoveries</p>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="stats-grid">
+        <div class="card stat-card">
+            <div class="stat-number">{{ summary.total_studies }}</div>
+            <div class="stat-label">Total Studies</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-number">{{ summary.human_studies }}</div>
+            <div class="stat-label">Human Studies</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-number">{{ summary.plant_studies }}</div>
+            <div class="stat-label">Plant Studies</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-number">{{ summary.microbe_studies }}</div>
+            <div class="stat-label">Microbe Studies</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card filter-section">
+        <h3><i class="fas fa-filter"></i> Filter Experiments</h3>
+        <div class="filter-grid">
+            <select id="organismFilter" class="filter-select">
+                <option value="">All Organisms</option>
+                <option value="Human">Human</option>
+                <option value="Plant">Plant</option>
+                <option value="Microbe">Microbe</option>
+            </select>
+            <select id="environmentFilter" class="filter-select">
+                <option value="">All Environments</option>
+                <option value="ISS">ISS</option>
+                <option value="Lunar Analog">Lunar Analog</option>
+                <option value="Mars Analog">Mars Analog</option>
+                <option value="Space Exposure">Space Exposure</option>
+            </select>
+            <input type="text" id="searchInput" class="filter-select" placeholder="Search studies...">
+            <button onclick="applyFilters()" class="cta-button">
+                <i class="fas fa-search"></i> Apply Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Visualization -->
+    <div class="card">
+        <h3><i class="fas fa-chart-pie"></i> Study Distribution</h3>
+        <div id="chartContainer" style="height: 400px;"></div>
+    </div>
+
+    <!-- Experiments Table -->
+    <div class="card">
+        <h3><i class="fas fa-table"></i> Research Experiments</h3>
+        <div id="experimentsTable">
+            <div class="loading">Loading space biology data...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+let allData = [];
+
+async function loadData() {
+    try {
+        const response = await fetch('/api/data');
+        allData = await response.json();
+        displayData(allData);
+        createCharts(allData);
+    } catch (error) {
+        console.error('Error loading data:', error);
+    }
+}
+
+function displayData(data) {
+    const container = document.getElementById('experimentsTable');
+    
+    if (data.length === 0) {
+        container.innerHTML = '<div class="no-data">No experiments found matching your filters.</div>';
+        return;
+    }
+
+    const html = data.map(exp => `
+        <div class="experiment-card">
+            <h4>${exp.title}</h4>
+            <div class="experiment-meta">
+                <span class="tag organism">${exp.organism_type}</span>
+                <span class="tag environment">${exp.environment}</span>
+                <span class="tag year">${exp.year}</span>
+            </div>
+            <p class="finding">${exp.key_finding}</p>
+            <button onclick="summarizeAbstract('${exp.abstract}')" class="summary-btn">
+                <i class="fas fa-robot"></i> AI Summary
+            </button>
+        </div>
+    `).join('');
+
+    container.innerHTML = html;
+}
+
+async function applyFilters() {
+    const organism = document.getElementById('organismFilter').value;
+    const environment = document.getElementById('environmentFilter').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+
+    let filtered = allData;
+
+    if (organism) {
+        filtered = filtered.filter(exp => exp.organism_type === organism);
+    }
+    if (environment) {
+        filtered = filtered.filter(exp => exp.environment === environment);
+    }
+    if (search) {
+        filtered = filtered.filter(exp => 
+            exp.title.toLowerCase().includes(search) ||
+            exp.key_finding.toLowerCase().includes(search) ||
+            exp.abstract.toLowerCase().includes(search)
+        );
+    }
+
+    displayData(filtered);
+    createCharts(filtered);
+}
+
+async function summarizeAbstract(abstract) {
+    try {
+        const response = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: abstract })
+        });
+        const data = await response.json();
+        alert(`AI Summary:\n\n${data.summary}`);
+    } catch (error) {
+        console.error('Error summarizing:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+
+<style>
+.experiment-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border-left: 4px solid var(--cosmic-purple);
+}
+
+.tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+.tag.organism { background: var(--earth-teal); color: black; }
+.tag.environment { background: var(--cosmic-purple); color: white; }
+.tag.year { background: var(--mars-orange); color: white; }
+
+.finding {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0.5rem 0;
+    font-style: italic;
+}
+
+.summary-btn {
+    background: transparent;
+    border: 1px solid var(--cosmic-purple);
+    color: var(--cosmic-purple);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.summary-btn:hover {
+    background: var(--cosmic-purple);
+    color: white;
+}
+</style>
+{% endblock %}
